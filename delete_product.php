@@ -11,8 +11,8 @@
   }
 ?>
 <?php
-  $db->query("SELECT id FROM sales WHERE product_id = " . (int)$product['id'] . " LIMIT 1");
-  if ($db->num_rows($db->query("SELECT id FROM sales WHERE product_id = " . (int)$product['id'] . " LIMIT 1")) > 0) {
+  $sales_ref = $db->query("SELECT id FROM sales WHERE product_id = " . (int)$product['id'] . " LIMIT 1");
+  if ($db->num_rows($sales_ref) > 0) {
       $session->msg('d', 'This product has sales history; archive it instead of deleting it.');
       redirect('product.php');
   }
