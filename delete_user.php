@@ -4,7 +4,13 @@
    page_require_level(1);
 ?>
 <?php
-  $delete_id = delete_by_id('users',(int)$_GET['id']);
+  $target_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+  $current = current_user();
+  if (!$target_id || !$current || (int)$target_id === (int)$current['id']) {
+      $session->msg('d', 'Invalid user or you cannot delete your own account.');
+      redirect('users.php');
+  }
+  $delete_id = delete_by_id('users',(int)$target_id);
   if($delete_id){
       $session->msg("s","User deleted.");
       redirect('users.php');
