@@ -48,3 +48,7 @@ This branch contains an initial repair pass. It is intentionally separate from `
 8. Force a failed operation and verify transaction rollback.
 9. Test reports, product CRUD, user CRUD, uploads, and each delivery/order route.
 10. Test with the intended PHP and MySQL versions before production deployment.
+
+## Embedded framework compatibility finding
+
+The nested `stock/` app contains CodeIgniter **3.1.6** (confirmed from `stock/system/core/CodeIgniter.php`). This is an old release and should not be considered PHP 8.2/8.4-ready solely because the main application's lint passes. Upgrade the embedded CI app to a current CI3 maintenance release (or migrate it) in a separately tested change; avoid blindly replacing its `system/` directory.
