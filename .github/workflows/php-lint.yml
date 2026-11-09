@@ -1,0 +1,20 @@
+name: PHP syntax check
+
+on:
+  pull_request:
+  push:
+    branches: [master, "repair/**"]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+      - name: Lint main application PHP files
+        run: |
+          find . -maxdepth 2 -type f -name "*.php" \
+            ! -path "./stock/*" \
+            ! -path "./.git/*" -print0 | xargs -0 -n1 php -l
