@@ -17,6 +17,12 @@ This branch contains an initial repair pass. It is intentionally separate from `
 - Updated sale editing to restore old quantity and apply the new quantity in one transaction.
 - Updated sale deletion to restore inventory in the same transaction.
 - Regenerate the PHP session ID on successful login.
+- Correct access-level enforcement and add the missing driver lookup helper.
+- Prevent self-deletion and deleting products with sales history.
+- Harden image uploads (content/MIME/size checks and random filenames).
+- Hide SQL statements from client-facing database errors.
+- Introduce `password_hash()` / `password_verify()` with automatic SHA-1-to-modern-hash upgrade on successful legacy login; update password creation/change paths.
+- Add a GitHub Actions PHP 8.2 syntax-lint workflow for root, includes, and layouts.
 
 ## Important remaining work
 
