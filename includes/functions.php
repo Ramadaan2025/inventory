@@ -14,9 +14,10 @@ function real_escape($str){
 /* Function for Remove html characters
 /*--------------------------------------------------------------*/
 function remove_junk($str){
-  $str = nl2br($str);
-  $str = htmlspecialchars(strip_tags($str, ENT_QUOTES));
-  return $str;
+  if ($str === null) {
+    return '';
+  }
+  return htmlspecialchars(strip_tags((string)$str), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 /*--------------------------------------------------------------*/
 /* Function for Uppercase first character
@@ -32,24 +33,25 @@ function first_character($str){
 function validate_fields($var){
   global $errors;
   foreach ($var as $field) {
-    $val = remove_junk($_POST[$field]);
-    if(isset($val) && $val==''){
-      $errors = $field ." can't be blank.";
+    $val = trim((string)($_POST[$field] ?? ''));
+    if ($val === '') {
+      $errors = $field . " can't be blank.";
       return $errors;
     }
   }
+  return true;
 }
 /*--------------------------------------------------------------*/
 /* Function for Display Session Message
    Ex echo displayt_msg($message);
 /*--------------------------------------------------------------*/
 function display_msg($msg =''){
-   $output = array();
+   $output = '';
    if(!empty($msg)) {
       foreach ($msg as $key => $value) {
-         $output  = "<div class=\"alert alert-{$key}\">";
+         $output .= "<div class=\"alert alert-{$key}\">";
          $output .= "<a href=\"#\" class=\"close\" data-dismiss=\"alert\">&times;</a>";
-         $output .= remove_junk(first_character($value));
+         $output .= remove_junk(first_character(is_array($value) ? implode(', ', $value) : $value));
          $output .= "</div>";
       }
       return $output;
