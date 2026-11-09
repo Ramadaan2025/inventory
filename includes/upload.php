@@ -43,15 +43,27 @@ class  Media {
     elseif($file['error'] != 0):
       $this->errors[] = $this->upload_errors[$file['error']];
       return false;
+    elseif(!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])):
+      $this->errors[] = 'Upload source is invalid.';
+      return false;
+    elseif((int)($file['size'] ?? 0) > 5 * 1024 * 1024):
+      $this->errors[] = 'Image must be 5 MB or smaller.';
+      return false;
     elseif(!$this->file_ext($file['name'])):
       $this->errors[] = 'File not right format ';
       return false;
     else:
-      $this->imageInfo = getimagesize($file['tmp_name']);
-      $this->fileName  = basename($file['name']);
+      $this->imageInfo = @getimagesize($file['tmp_name']);
+      $allowedMimes = array('image/jpeg', 'image/png', 'image/gif');
+      if (!$this->imageInfo || !in_array($this->imageInfo['mime'] ?? '', $allowedMimes, true)) {
+        $this->errors[] = 'Uploaded file is not a valid supported image.';
+        return false;
+      }
+      $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+      $this->fileName = bin2hex(random_bytes(16)) . '.' . $extension;
       $this->fileType  = $this->imageInfo['mime'];
       $this->fileTempPath = $file['tmp_name'];
-     return true;
+      return true;
     endif;
 
   }
