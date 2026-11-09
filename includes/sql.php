@@ -81,42 +81,33 @@ function tableExists($table){
  /* Login with the data provided in $_POST,
  /* coming from the login form.
 /*--------------------------------------------------------------*/
-  function authenticate($username='', $password='') {
+  function authenticate_record($username, $password) {
     global $db;
-    $username = $db->escape($username);
-    $password = $db->escape($password);
-    $sql  = sprintf("SELECT id,username,password,user_level FROM users WHERE username ='%s' LIMIT 1", $username);
-    $result = $db->query($sql);
-    if($db->num_rows($result)){
-      $user = $db->fetch_assoc($result);
-      $password_request = sha1($password);
-      if($password_request === $user['password'] ){
-        return $user['id'];
-      }
+    $safeUsername = $db->escape((string)$username);
+    $result = $db->query("SELECT id,username,password,user_level FROM users WHERE username = '{$safeUsername}' LIMIT 1");
+    if (!$db->num_rows($result)) return false;
+    $user = $db->fetch_assoc($result);
+    $stored = (string)$user['password'];
+    $valid = password_verify((string)$password, $stored);
+    $legacy = !$valid && preg_match('/^[a-f0-9]{40}$/i', $stored) && hash_equals(strtolower($stored), sha1((string)$password));
+    if (!$valid && !$legacy) return false;
+    if ($legacy) {
+      $upgrade = password_hash((string)$password, PASSWORD_DEFAULT);
+      $safeHash = $db->escape($upgrade);
+      $db->query("UPDATE users SET password = '{$safeHash}' WHERE id = " . (int)$user['id']);
+      $user['password'] = $upgrade;
     }
-   return false;
+    return $user;
   }
-  /*--------------------------------------------------------------*/
-  /* Login with the data provided in $_POST,
-  /* coming from the login_v2.php form.
-  /* If you used this method then remove authenticate function.
- /*--------------------------------------------------------------*/
-   function authenticate_v2($username='', $password='') {
-     global $db;
-     $username = $db->escape($username);
-     $password = $db->escape($password);
-     $sql  = sprintf("SELECT id,username,password,user_level FROM users WHERE username ='%s' LIMIT 1", $username);
-     $result = $db->query($sql);
-     if($db->num_rows($result)){
-       $user = $db->fetch_assoc($result);
-       $password_request = sha1($password);
-       if($password_request === $user['password'] ){
-         return $user;
-       }
-     }
-    return false;
-   }
 
+  function authenticate($username='', $password='') {
+    $user = authenticate_record($username, $password);
+    return $user ? $user['id'] : false;
+  }
+
+  function authenticate_v2($username='', $password='') {
+    return authenticate_record($username, $password);
+  }
 
   /*--------------------------------------------------------------*/
   /* Find current log in user by session id
