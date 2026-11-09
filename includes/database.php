@@ -81,6 +81,18 @@ public function insert_id()
 {
   return mysqli_insert_id($this->con);
 }
+public function begin_transaction()
+{
+  return mysqli_begin_transaction($this->con);
+}
+public function commit()
+{
+  return mysqli_commit($this->con);
+}
+public function rollback()
+{
+  return mysqli_rollback($this->con);
+}
 public function affected_rows()
 {
   return mysqli_affected_rows($this->con);
