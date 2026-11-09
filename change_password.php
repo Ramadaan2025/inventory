@@ -13,13 +13,16 @@
 
     if(empty($errors)){
 
-             if(sha1($_POST['old-password']) !== current_user()['password'] ){
+             $oldPassword = (string)($_POST['old-password'] ?? '');
+             $storedPassword = (string)current_user()['password'];
+             $validOld = password_verify($oldPassword, $storedPassword) || (preg_match('/^[a-f0-9]{40}$/i', $storedPassword) && hash_equals(strtolower($storedPassword), sha1($oldPassword)));
+             if(!$validOld ){
                $session->msg('d', "Your old password not match");
                redirect('change_password.php',false);
              }
 
-            $id = (int)$_POST['id'];
-            $new = remove_junk($db->escape(sha1($_POST['new-password'])));
+            $id = (int)current_user()['id'];
+            $new = $db->escape(password_hash((string)$_POST['new-password'], PASSWORD_DEFAULT));
             $sql = "UPDATE users SET password ='{$new}' WHERE id='{$db->escape($id)}'";
             $result = $db->query($sql);
                 if($result && $db->affected_rows() === 1):
