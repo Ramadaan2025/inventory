@@ -48,13 +48,12 @@ public function query($sql)
       if (trim($sql != "")) {
           $this->query_id = $this->con->query($sql);
       }
-      if (!$this->query_id)
-        // only for Develope mode
-              die("Error on this Query :<pre> " . $sql ."</pre>");
-       // For production mode
-        //  die("Error on Query");
-
-       return $this->query_id;
+      if (!$this->query_id) {
+        // Keep database details in server logs rather than exposing SQL to visitors.
+        error_log('Database query failed: ' . mysqli_error($this->con));
+        throw new RuntimeException('A database operation failed. Please try again.');
+      }
+      return $this->query_id;
 
    }
 
