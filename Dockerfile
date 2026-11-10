@@ -15,5 +15,7 @@ RUN printf '<Directory /var/www/html>\n    AllowOverride All\n    Require all gr
     > /etc/apache2/conf-available/inventory-directory.conf \
     && a2enconf inventory-directory
 
+COPY . /var/www/html/
+
 WORKDIR /var/www/html
 EXPOSE 3000
