@@ -193,12 +193,3 @@ function find_user_by_name($name) {
 
 
 
-?>
-<script>
-function redirectToBottom() {
-  window.location.hash = 'bottom';
-}
-</script>
-
-
-
