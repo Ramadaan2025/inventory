@@ -11,12 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN sed -i 's/Listen 80/Listen 3000/' /etc/apache2/ports.conf \
     && sed -ri 's/:80>/:3000>/g' /etc/apache2/sites-available/*.conf
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html
-RUN sed -ri -e 's!/var/www/html!\${APACHE_DOCUMENT_ROOT}!g' \
-    /etc/apache2/sites-available/*.conf \
-    /etc/apache2/apache2.conf \
-    /etc/apache2/conf-available/*.conf
-
 RUN printf '<Directory /var/www/html>\n    AllowOverride All\n    Require all granted\n</Directory>\n' \
     > /etc/apache2/conf-available/inventory-directory.conf \
     && a2enconf inventory-directory
