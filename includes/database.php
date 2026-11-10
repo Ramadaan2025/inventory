@@ -15,7 +15,7 @@ class MySqli_DB {
 /*--------------------------------------------------------------*/
 public function db_connect()
 {
-  $this->con = mysqli_connect(DB_HOST,DB_USER,DB_PASS);
+  $this->con = mysqli_connect(DB_HOST, DB_USER, DB_PASS, null, DB_PORT);
   if(!$this->con)
          {
            die(" Database connection failed:". mysqli_connect_error());
@@ -48,13 +48,12 @@ public function query($sql)
       if (trim($sql != "")) {
           $this->query_id = $this->con->query($sql);
       }
-      if (!$this->query_id)
-        // only for Develope mode
-              die("Error on this Query :<pre> " . $sql ."</pre>");
-       // For production mode
-        //  die("Error on Query");
-
-       return $this->query_id;
+      if (!$this->query_id) {
+        // Keep database details in server logs rather than exposing SQL to visitors.
+        error_log('Database query failed: ' . mysqli_error($this->con));
+        throw new RuntimeException('A database operation failed. Please try again.');
+      }
+      return $this->query_id;
 
    }
 
@@ -80,6 +79,18 @@ public function num_rows($statement)
 public function insert_id()
 {
   return mysqli_insert_id($this->con);
+}
+public function begin_transaction()
+{
+  return mysqli_begin_transaction($this->con);
+}
+public function commit()
+{
+  return mysqli_commit($this->con);
+}
+public function rollback()
+{
+  return mysqli_rollback($this->con);
 }
 public function affected_rows()
 {

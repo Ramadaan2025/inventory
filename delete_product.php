@@ -11,6 +11,11 @@
   }
 ?>
 <?php
+  $sales_ref = $db->query("SELECT id FROM sales WHERE product_id = " . (int)$product['id'] . " LIMIT 1");
+  if ($db->num_rows($sales_ref) > 0) {
+      $session->msg('d', 'This product has sales history; archive it instead of deleting it.');
+      redirect('product.php');
+  }
   $delete_id = delete_by_id('products',(int)$product['id']);
   if($delete_id){
       $session->msg("s","Products deleted.");

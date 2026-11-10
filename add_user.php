@@ -21,10 +21,10 @@ if (isset($_POST['add_user'])) {
     if (empty($errors)) {
         $name           = remove_junk($db->escape($_POST['full-name']));
         $username       = remove_junk($db->escape($_POST['username']));
-        $password       = remove_junk($db->escape($_POST['password']));
-        $confirm_pass   = remove_junk($db->escape($_POST['confirm-password']));
+        $password       = (string)($_POST['password'] ?? '');
+        $confirm_pass   = (string)($_POST['confirm-password'] ?? '');
         $user_level     = (int)$db->escape($_POST['level']);
-        $password       = sha1($password);
+        $password_hash  = password_hash($password, PASSWORD_DEFAULT);
 
         // Check if a user with the same name already exists
         if (user_name_exists($username)) {
@@ -33,7 +33,7 @@ if (isset($_POST['add_user'])) {
         }
 
         // Check if the password and confirmation password match
-        if ($password !== sha1($confirm_pass)) {
+        if (!hash_equals($password, $confirm_pass)) {
             $session->msg('d', 'Password and confirmation password do not match!');
             redirect('add_user.php', false);
         }
@@ -41,7 +41,7 @@ if (isset($_POST['add_user'])) {
         $query = "INSERT INTO users (";
         $query .= "name, username, password, user_level, status";
         $query .= ") VALUES (";
-        $query .= " '{$name}', '{$username}', '{$password}', '{$user_level}', '1'";
+        $query .= " '{$name}', '{$username}', '{$db->escape($password_hash)}', '{$user_level}', '1'";
         $query .= ")";
 
         if ($db->query($query)) {

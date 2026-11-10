@@ -14,34 +14,42 @@ if(!$sale){
 <?php $product = find_by_id('products',$sale['product_id']); ?>
 <?php
 
-  if(isset($_POST['update_sale'])){
-    $req_fields = array('title','quantity','price','total', 'date' );
-    validate_fields($req_fields);
-        if(empty($errors)){
-          $p_id      = $db->escape((int)$product['id']);
-          $s_qty     = $db->escape((int)$_POST['quantity']);
-          $s_total   = $db->escape($_POST['total']);
-          $date      = $db->escape($_POST['date']);
-          $s_date    = date("Y-m-d", strtotime($date));
+  if (isset($_POST['update_sale'])) {
+    validate_fields(array('quantity', 'total', 'date'));
+    $newQty = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT);
+    $newTotal = filter_input(INPUT_POST, 'total', FILTER_VALIDATE_FLOAT);
+    $newDate = $_POST['date'] ?? '';
 
-          $sql  = "UPDATE sales SET";
-          $sql .= " product_id= '{$p_id}',qty={$s_qty},price='{$s_total}',date='{$s_date}'";
-          $sql .= " WHERE id ='{$sale['id']}'";
-          $result = $db->query($sql);
-          if( $result && $db->affected_rows() === 1){
-                    update_product_qty($s_qty,$p_id);
-                    $session->msg('s',"Sale updated.");
-                    redirect('edit_sale.php?id='.$sale['id'], false);
-                  } else {
-                    $session->msg('d',' Sorry failed to updated!');
-                    redirect('sales.php', false);
-                  }
-        } else {
-           $session->msg("d", $errors);
-           redirect('edit_sale.php?id='.(int)$sale['id'],false);
+    if (!$newQty || $newQty < 1 || $newTotal === false || $newTotal < 0 ||
+        !preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $newDate)) {
+        $session->msg('d', 'Invalid quantity, total, or date.');
+        redirect('edit_sale.php?id=' . (int)$sale['id'], false);
+    }
+
+    $productId = (int)$sale['product_id'];
+    $oldQty = (int)$sale['qty'];
+    $newQty = (int)$newQty;
+    $safeDate = $db->escape($newDate);
+    $db->begin_transaction();
+    try {
+        // Restore the old sale quantity, then reserve the replacement quantity.
+        $restore = $db->query("UPDATE products SET quantity = quantity + {$oldQty} WHERE id = {$productId}");
+        $deduct = $db->query("UPDATE products SET quantity = quantity - {$newQty} WHERE id = {$productId} AND quantity >= {$newQty}");
+        if (!$restore || !$deduct || $db->affected_rows() !== 1) {
+            throw new RuntimeException('Stock adjustment failed.');
         }
+        $update = $db->query("UPDATE sales SET qty = {$newQty}, price = " . (float)$newTotal . ", date = '{$safeDate}' WHERE id = " . (int)$sale['id']);
+        if (!$update) {
+            throw new RuntimeException('Sale update failed.');
+        }
+        $db->commit();
+        $session->msg('s', 'Sale updated.');
+    } catch (Throwable $e) {
+        $db->rollback();
+        $session->msg('d', 'Sale was not updated; inventory was rolled back.');
+    }
+    redirect('sales.php', false);
   }
-
 ?>
 <?php include_once('layouts/header.php'); ?>
 <div class="row">

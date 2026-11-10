@@ -81,42 +81,33 @@ function tableExists($table){
  /* Login with the data provided in $_POST,
  /* coming from the login form.
 /*--------------------------------------------------------------*/
-  function authenticate($username='', $password='') {
+  function authenticate_record($username, $password) {
     global $db;
-    $username = $db->escape($username);
-    $password = $db->escape($password);
-    $sql  = sprintf("SELECT id,username,password,user_level FROM users WHERE username ='%s' LIMIT 1", $username);
-    $result = $db->query($sql);
-    if($db->num_rows($result)){
-      $user = $db->fetch_assoc($result);
-      $password_request = sha1($password);
-      if($password_request === $user['password'] ){
-        return $user['id'];
-      }
+    $safeUsername = $db->escape((string)$username);
+    $result = $db->query("SELECT id,username,password,user_level FROM users WHERE username = '{$safeUsername}' LIMIT 1");
+    if (!$db->num_rows($result)) return false;
+    $user = $db->fetch_assoc($result);
+    $stored = (string)$user['password'];
+    $valid = password_verify((string)$password, $stored);
+    $legacy = !$valid && preg_match('/^[a-f0-9]{40}$/i', $stored) && hash_equals(strtolower($stored), sha1((string)$password));
+    if (!$valid && !$legacy) return false;
+    if ($legacy) {
+      $upgrade = password_hash((string)$password, PASSWORD_DEFAULT);
+      $safeHash = $db->escape($upgrade);
+      $db->query("UPDATE users SET password = '{$safeHash}' WHERE id = " . (int)$user['id']);
+      $user['password'] = $upgrade;
     }
-   return false;
+    return $user;
   }
-  /*--------------------------------------------------------------*/
-  /* Login with the data provided in $_POST,
-  /* coming from the login_v2.php form.
-  /* If you used this method then remove authenticate function.
- /*--------------------------------------------------------------*/
-   function authenticate_v2($username='', $password='') {
-     global $db;
-     $username = $db->escape($username);
-     $password = $db->escape($password);
-     $sql  = sprintf("SELECT id,username,password,user_level FROM users WHERE username ='%s' LIMIT 1", $username);
-     $result = $db->query($sql);
-     if($db->num_rows($result)){
-       $user = $db->fetch_assoc($result);
-       $password_request = sha1($password);
-       if($password_request === $user['password'] ){
-         return $user;
-       }
-     }
-    return false;
-   }
 
+  function authenticate($username='', $password='') {
+    $user = authenticate_record($username, $password);
+    return $user ? $user['id'] : false;
+  }
+
+  function authenticate_v2($username='', $password='') {
+    return authenticate_record($username, $password);
+  }
 
   /*--------------------------------------------------------------*/
   /* Find current log in user by session id
@@ -185,25 +176,34 @@ function tableExists($table){
   /*--------------------------------------------------------------*/
    function page_require_level($require_level){
      global $session;
-     $current_user = current_user();
-     $login_level = find_by_groupLevel($current_user['user_level']);
-     //if user not login
-     if (!$session->isUserLoggedIn(true)):
-            $session->msg('d','Please login...');
-            redirect('index.php', false);
-      //if Group status Deactive
-     elseif($login_level['group_status'] === '0'):
-           $session->msg('d','This level user has been band!');
-           redirect('home.php',false);
-      //cheackin log in User level and Require level is Less than or equal to
-     elseif($current_user['user_level'] <= (int)$require_level):
-              return true;
-      else:
-            $session->msg("d", "Sorry! you dont have permission to view the page.");
-            redirect('home.php', false);
-        endif;
-
+     if (!$session->isUserLoggedIn(true)) {
+       $session->msg('d', 'Please login...');
+       redirect('index.php', false);
+       return false;
      }
+     $current_user = current_user();
+     if (!$current_user) {
+       $session->logout();
+       $session->msg('d', 'Your session is invalid. Please login again.');
+       redirect('index.php', false);
+       return false;
+     }
+     global $db;
+     $level = (int)$current_user['user_level'];
+     $result = $db->query("SELECT group_status FROM user_groups WHERE group_level = {$level} LIMIT 1");
+     $group = $db->fetch_assoc($result);
+     if (!$group || (int)$group['group_status'] !== 1) {
+       $session->msg('d', 'This user group is inactive or missing.');
+       redirect('home.php', false);
+       return false;
+     }
+     if ($level <= (int)$require_level) {
+       return true;
+     }
+     $session->msg('d', 'Sorry! You do not have permission to view this page.');
+     redirect('home.php', false);
+     return false;
+   }
    /*--------------------------------------------------------------*/
    /* Function for Finding all product name
    /* JOIN with categorie  and media database table
@@ -219,6 +219,13 @@ function tableExists($table){
     return find_by_sql($sql);
 
    }
+/* Find driver by exact name */
+function find_driver_by_name($name) {
+  global $db;
+  $safeName = $db->escape(trim((string)$name));
+  $result = $db->query("SELECT id, name FROM drivers WHERE name = '{$safeName}' LIMIT 1");
+  return $db->fetch_assoc($result);
+}
   /*--------------------------------------------------------------*/
   /* Function for Finding all product name
   /* Request coming from ajax.php for auto suggest
